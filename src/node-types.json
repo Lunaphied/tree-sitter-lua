@@ -84,6 +84,10 @@
         "named": true
       },
       {
+        "type": "continue_statement",
+        "named": true
+      },
+      {
         "type": "declaration",
         "named": true
       },
@@ -264,6 +268,10 @@
             "named": true
           },
           {
+            "type": "string",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -374,6 +382,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "string",
             "named": true
           },
           {
@@ -613,6 +625,10 @@
             "named": true
           },
           {
+            "type": "string",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -787,6 +803,10 @@
             "named": true
           },
           {
+            "type": "string",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -836,6 +856,21 @@
     }
   },
   {
+    "type": "parenthesized_expression_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "repeat_statement",
     "named": true,
     "fields": {
@@ -871,6 +906,10 @@
       "types": [
         {
           "type": "expression_list",
+          "named": true
+        },
+        {
+          "type": "parenthesized_expression_list",
           "named": true
         }
       ]
@@ -975,6 +1014,21 @@
     }
   },
   {
+    "type": "vararg_expression",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "variable_declaration",
     "named": true,
     "fields": {},
@@ -1046,6 +1100,10 @@
     }
   },
   {
+    "type": "!",
+    "named": false
+  },
+  {
     "type": "\"",
     "named": false
   },
@@ -1058,7 +1116,23 @@
     "named": false
   },
   {
+    "type": "%=",
+    "named": false
+  },
+  {
     "type": "&",
+    "named": false
+  },
+  {
+    "type": "&&",
+    "named": false
+  },
+  {
+    "type": "&&=",
+    "named": false
+  },
+  {
+    "type": "&=",
     "named": false
   },
   {
@@ -1078,7 +1152,15 @@
     "named": false
   },
   {
+    "type": "*=",
+    "named": false
+  },
+  {
     "type": "+",
+    "named": false
+  },
+  {
+    "type": "+=",
     "named": false
   },
   {
@@ -1094,6 +1176,10 @@
     "named": false
   },
   {
+    "type": "-=",
+    "named": false
+  },
+  {
     "type": ".",
     "named": false
   },
@@ -1102,11 +1188,23 @@
     "named": false
   },
   {
+    "type": "...",
+    "named": false
+  },
+  {
     "type": "/",
     "named": false
   },
   {
     "type": "//",
+    "named": false
+  },
+  {
+    "type": "//=",
+    "named": false
+  },
+  {
+    "type": "/=",
     "named": false
   },
   {
@@ -1127,6 +1225,10 @@
   },
   {
     "type": "<<",
+    "named": false
+  },
+  {
+    "type": "<<=",
     "named": false
   },
   {
@@ -1154,6 +1256,10 @@
     "named": false
   },
   {
+    "type": ">>=",
+    "named": false
+  },
+  {
     "type": "[",
     "named": false
   },
@@ -1174,6 +1280,10 @@
     "named": false
   },
   {
+    "type": "^=",
+    "named": false
+  },
+  {
     "type": "and",
     "named": false
   },
@@ -1183,6 +1293,10 @@
   },
   {
     "type": "comment_content",
+    "named": true
+  },
+  {
+    "type": "continue_statement",
     "named": true
   },
   {
@@ -1242,6 +1356,10 @@
     "named": false
   },
   {
+    "type": "module",
+    "named": false
+  },
+  {
     "type": "nil",
     "named": true
   },
@@ -1278,10 +1396,6 @@
     "named": false
   },
   {
-    "type": "vararg_expression",
-    "named": true
-  },
-  {
     "type": "while",
     "named": false
   },
@@ -1291,6 +1405,18 @@
   },
   {
     "type": "|",
+    "named": false
+  },
+  {
+    "type": "|=",
+    "named": false
+  },
+  {
+    "type": "||",
+    "named": false
+  },
+  {
+    "type": "||=",
     "named": false
   },
   {

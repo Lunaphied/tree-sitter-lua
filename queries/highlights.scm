@@ -6,6 +6,7 @@
  "goto"
  "in"
  "local"
+ "module"
 ] @keyword
 
 (label_statement) @label
@@ -78,6 +79,9 @@
  "and"
  "not"
  "or"
+ "!"
+ "&&"
+ "||"
 ] @keyword.operator
 
 [
@@ -90,6 +94,7 @@
   "#"
   "=="
   "~="
+  ;"!="
   "<="
   ">="
   "<"
@@ -102,6 +107,21 @@
   ">>"
   "//"
   ".."
+  "+="
+  "-="
+  "*="
+  "/="
+  "//="
+  "||="
+  "&&="
+  "|="
+  "&="
+  "~="
+  "<<="
+  ">>="
+  "^="
+  "%="
+
 ] @operator
 
 ;; Punctuations
@@ -206,8 +226,9 @@
   (identifier) @function.builtin
   (#any-of? @function.builtin
     ;; built-in functions in Lua 5.1
+	;; We've removed 'module' because it's not recommended and Erde uses it as a keyword.
     "assert" "collectgarbage" "dofile" "error" "getfenv" "getmetatable" "ipairs"
-    "load" "loadfile" "loadstring" "module" "next" "pairs" "pcall" "print"
+    "load" "loadfile" "loadstring" "next" "pairs" "pcall" "print"
     "rawequal" "rawget" "rawset" "require" "select" "setfenv" "setmetatable"
     "tonumber" "tostring" "type" "unpack" "xpcall"))
 

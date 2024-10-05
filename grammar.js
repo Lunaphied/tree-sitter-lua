@@ -1,7 +1,7 @@
 const PREC = {
-  OR: 1, // or
-  AND: 2, // and
-  COMPARE: 3, // < > <= >= ~= ==
+  OR: 1, // or, ||
+  AND: 2, // and, &&
+  COMPARE: 3, // < > <= >= ~= != ==
   BIT_OR: 4, // |
   BIT_NOT: 5, // ~
   BIT_AND: 6, // &
@@ -9,7 +9,7 @@ const PREC = {
   CONCAT: 8, // ..
   PLUS: 9, // + -
   MULTI: 10, // * / // %
-  UNARY: 11, // not # - ~
+  UNARY: 11, // not ! # - ~
   POWER: 12, // ^
 };
 
@@ -41,6 +41,25 @@ module.exports = grammar({
   supertypes: ($) => [$.statement, $.expression, $.declaration, $.variable],
 
   word: ($) => $.identifier,
+
+  conflicts: ($) => [
+    // We don't actually know how to disambiguate these from each other,
+    // so for now we just allow tree-sitter to fallback to GLR parsing to
+    // parse as both and pick the one that doesn't fail.
+    // It works but it's non-optimal and we should really look into another option.
+    [ $._expression_list, $.parenthesized_expression ],
+    // Dear gods what the fuck. This is all added to handle the option of bracing instead of using `end`
+    // But there has to be a better way (even though this somehow seems to work).
+    // FIXME: !!!
+    [ $.if_statement ],
+    [ $.return_statement ],
+    [ $._block ],
+    [ $.elseif_statement ],
+    // End of fuckery specifically for braced bodies.
+    // Begin fuckery for trailing commas...
+    [ $._expression_list ],
+    // End trailing commas.
+  ],
 
   rules: {
     // chunk ::= block
@@ -84,6 +103,7 @@ module.exports = grammar({
         $.function_call,
         $.label_statement,
         $.break_statement,
+        $.continue_statement,
         $.goto_statement,
         $.do_statement,
         $.while_statement,
@@ -97,18 +117,37 @@ module.exports = grammar({
     return_statement: ($) =>
       seq(
         'return',
-        optional(alias($._expression_list, $.expression_list)),
+        optional(choice(
+            $.parenthesized_expression_list,
+            alias($._expression_list, $.expression_list)
+        )),
         optional(';')
       ),
 
     // ';'
     empty_statement: (_) => ';',
 
-    // varlist '=' explist
+    // varlist ('=' | '+=' | '-=' | '*=' | '/=' | '//=' | '^=' | '%=' | '||=' | '&&=' | '|=' | '&=' | '~=' | '<<=' | '>>=')  explist
     assignment_statement: ($) =>
       seq(
         alias($._variable_assignment_varlist, $.variable_list),
-        '=',
+        choice(
+            '=',
+            '+=',
+            '-=',
+            '*=',
+            '/=',
+            '//=',
+            '||=',
+            '&&=',
+            '|=',
+            '&=',
+            '~=',
+            '<<=',
+            '>>=',
+            '^=',
+            '%=',
+        ),
         alias($._variable_assignment_explist, $.expression_list)
       ),
     // varlist ::= var {',' var}
@@ -124,11 +163,14 @@ module.exports = grammar({
     // break
     break_statement: (_) => 'break',
 
+    // continue
+    continue_statement: (_) => 'continue',
+
     // goto Name
     goto_statement: ($) => seq('goto', $.identifier),
 
     // do block end
-    do_statement: ($) => seq('do', field('body', optional_block($)), 'end'),
+    do_statement: ($) => seq('do', $._braced_body),
 
     // while exp do block end
     while_statement: ($) =>
@@ -136,15 +178,23 @@ module.exports = grammar({
         'while',
         field('condition', $.expression),
         'do',
-        field('body', optional_block($)),
-        'end'
+        $._braced_body
       ),
 
     // repeat block until exp
     repeat_statement: ($) =>
       seq(
         'repeat',
-        field('body', optional_block($)),
+        // Really we'd like to not allow an end here *and* allow parses without end
+        // that's why this is just copy-pasted, we should find a better solution...
+        choice(
+            seq(
+                '{',
+                field('body', optional_block($)),
+                '}'
+            ),
+            field('body', optional_block($)),
+        ),
         'until',
         field('condition', $.expression)
       ),
@@ -155,10 +205,18 @@ module.exports = grammar({
         'if',
         field('condition', $.expression),
         'then',
-        field('consequence', optional_block($)),
+        //$._braced_consequence,
+        choice(
+            seq(
+                '{',
+                field('consequence', optional_block($)),
+                '}'
+            ),
+            field('consequence', optional_block($)),
+        ),
         repeat(field('alternative', $.elseif_statement)),
         optional(field('alternative', $.else_statement)),
-        'end'
+        optional('end')
       ),
     // elseif exp then block
     elseif_statement: ($) =>
@@ -166,10 +224,38 @@ module.exports = grammar({
         'elseif',
         field('condition', $.expression),
         'then',
-        field('consequence', optional_block($))
+        choice(
+            seq(
+                '{',
+                field('consequence', optional_block($)),
+                '}'
+            ),
+            field('consequence', optional_block($)),
+        ),
       ),
     // else block
-    else_statement: ($) => seq('else', field('body', optional_block($))),
+    else_statement: ($) => seq('else', $._braced_body),
+
+    // XXX: *sigh*, this rule without the enforced end technically matches the empty string
+    // which isn't allowed. To fix this we have to remove it from being a *rule* and specifically
+    // embed it in the rules that use it, since those have other conditions that prevent matching an
+    // empty string. This is a weird and annoying limitation but I suspect makes sense in the context of LR(1) parsers.
+    //
+    // We would love to factor this out so _braced_consequence and _braced_body were one
+    // but for whatever reason trying to do this in various ways breaks things
+    // TODO: cleanup
+    // FIXME: ideally we'd like to enforce that lack of braces requires finishing with 'end',
+    // and with braces requires no end be present, but for consequences this is annoying since
+    // `end` doesn't necessarily immediately follow or even end up in the same rule...
+    //_braced_consequence: ($) =>
+    //  choice(
+    //      seq(
+    //          '{',
+    //          field('consequence', optional_block($)),
+    //          '}'
+    //      ),
+    //      field('consequence', optional_block($)),
+    //  ),
 
     // for Name '=' exp ',' exp [',' exp] do block end
     // for namelist in explist do block end
@@ -178,8 +264,7 @@ module.exports = grammar({
         'for',
         field('clause', choice($.for_generic_clause, $.for_numeric_clause)),
         'do',
-        field('body', optional_block($)),
-        'end'
+        $._braced_body,
       ),
     // namelist in explist
     for_generic_clause: ($) =>
@@ -201,7 +286,8 @@ module.exports = grammar({
 
     // function funcname funcbody
     // local function Name funcbody
-    // local namelist ['=' explist]
+    // module function Name funcbody
+    // (local | module] namelist ['=' explist]
     declaration: ($) =>
       choice(
         $.function_declaration,
@@ -209,6 +295,11 @@ module.exports = grammar({
           'local_declaration',
           alias($._local_function_declaration, $.function_declaration)
         ),
+        field(
+          'module_declaration',
+          alias($._module_function_declaration, $.function_declaration)
+        ),
+        // TODO: this isn't specifically local now that we've added module as an option.
         field('local_declaration', $.variable_declaration)
       ),
     // function funcname funcbody
@@ -217,6 +308,9 @@ module.exports = grammar({
     // local function Name funcbody
     _local_function_declaration: ($) =>
       seq('local', 'function', field('name', $.identifier), $._function_body),
+    // module function Name funcbody
+    _module_function_declaration: ($) =>
+      seq('module', 'function', field('name', $.identifier), $._function_body),
     // funcname ::= Name {'.' Name} [':' Name]
     _function_name: ($) =>
       choice(
@@ -244,10 +338,10 @@ module.exports = grammar({
         field('method', $.identifier)
       ),
 
-    // local namelist ['=' explist]
+    // (local | module) namelist ['=' explist]
     variable_declaration: ($) =>
       seq(
-        'local',
+        choice('local', 'module'),
         choice(
           alias($._att_name_list, $.variable_list),
           alias($._local_variable_assignment, $.assignment_statement)
@@ -275,10 +369,10 @@ module.exports = grammar({
     _attrib: ($) => seq('<', $.identifier, '>'),
 
     // explist ::= exp {',' exp}
-    _expression_list: ($) => list_seq($.expression, ','),
+    _expression_list: ($) => seq(list_seq($.expression, ',', true), optional(',')),
 
     /*
-      exp ::=  nil | false | true | Numeral | LiteralString | '...' | functiondef |
+      exp ::=  nil | false | true | Numeral | LiteralString | vararg | functiondef |
                prefixexp | tableconstructor | exp binop exp | unop exp
      */
     expression: ($) =>
@@ -397,30 +491,41 @@ module.exports = grammar({
         )
       ),
 
-    // '...'
-    vararg_expression: (_) => '...',
+    // '...' [identifier]
+    vararg_expression: ($) => prec.right(0, seq('...', optional($.identifier))),
 
     // functiondef ::= function funcbody
     function_definition: ($) => seq('function', $._function_body),
     // funcbody ::= '(' [parlist] ')' block end
     _function_body: ($) =>
       seq(
-        field('parameters', $.parameters),
-        field('body', optional_block($)),
-        'end'
+          field('parameters', $.parameters),
+          $._braced_body
+      ),
+    _braced_body: ($) =>
+      choice(
+          seq(
+              field('body', optional_block($)),
+              'end'
+          ),
+          seq(
+              '{',
+              field('body', optional_block($)),
+              '}'
+          )
       ),
     // '(' [parlist] ')'
     parameters: ($) => seq('(', optional($._parameter_list), ')'),
-    // parlist ::= namelist [',' '...'] | '...'
+    // parlist ::= namelist [',' ('...' [identifier]) ] | ('...' [identifier])
     _parameter_list: ($) =>
       choice(
-        seq(name_list($), optional(seq(',', $.vararg_expression))),
+        seq(name_list($), optional(seq(',', optional($.vararg_expression)))),
         $.vararg_expression
       ),
 
-    // prefixexp ::= var | functioncall | '(' exp ')'
+    // prefixexp ::= var | functioncall | string | '(' exp ')'
     _prefix_expression: ($) =>
-      prec(1, choice($.variable, $.function_call, $.parenthesized_expression)),
+      prec(1, choice($.variable, $.function_call, $.string, $.parenthesized_expression)),
 
     // var ::=  Name | prefixexp [ exp ] | prefixexp . Name
     variable: ($) =>
@@ -457,13 +562,16 @@ module.exports = grammar({
     // args ::=  '(' [explist] ')' | tableconstructor | LiteralString
     arguments: ($) =>
       choice(
-        seq('(', optional(list_seq($.expression, ',')), ')'),
+        seq('(', optional(list_seq($.expression, ',')), optional(','), ')'),
         $.table_constructor,
         $.string
       ),
 
     // '(' exp ')'
     parenthesized_expression: ($) => seq('(', $.expression, ')'),
+
+    // '(' explist ')
+    parenthesized_expression_list: ($) => seq('(', $._expression_list, ')'),
 
     // tableconstructor ::= '{' [fieldlist] '}'
     table_constructor: ($) => seq('{', optional($._field_list), '}'),
@@ -490,7 +598,9 @@ module.exports = grammar({
       choice(
         ...[
           ['or', PREC.OR],
+          ['||', PREC.OR],
           ['and', PREC.AND],
+          ['&&', PREC.AND],
           ['<', PREC.COMPARE],
           ['<=', PREC.COMPARE],
           ['==', PREC.COMPARE],
@@ -537,7 +647,7 @@ module.exports = grammar({
     unary_expression: ($) =>
       prec.left(
         PREC.UNARY,
-        seq(choice('not', '#', '-', '~'), field('operand', $.expression))
+        seq(choice('not', '!', '#', '-', '~'), field('operand', $.expression))
       ),
 
     // Name

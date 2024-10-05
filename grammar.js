@@ -13,6 +13,25 @@ const PREC = {
   POWER: 12, // ^
 };
 
+// Valid assignment operators.
+const ASSIGNMENT_OPS = [
+  '=',
+  '+=',
+  '-=',
+  '*=',
+  '/=',
+  '//=',
+  '||=',
+  '&&=',
+  '|=',
+  '&=',
+  '~=',
+  '<<=',
+  '>>=',
+  '^=',
+  '%=',
+];
+
 const list_seq = (rule, separator, trailing_separator = false) =>
   trailing_separator
     ? seq(rule, repeat(seq(separator, rule)), optional(separator))
@@ -127,27 +146,11 @@ module.exports = grammar({
     // ';'
     empty_statement: (_) => ';',
 
-    // varlist ('=' | '+=' | '-=' | '*=' | '/=' | '//=' | '^=' | '%=' | '||=' | '&&=' | '|=' | '&=' | '~=' | '<<=' | '>>=')  explist
+    // varlist (...ASSIGNMENT_OPS)  explist
     assignment_statement: ($) =>
       seq(
         alias($._variable_assignment_varlist, $.variable_list),
-        choice(
-            '=',
-            '+=',
-            '-=',
-            '*=',
-            '/=',
-            '//=',
-            '||=',
-            '&&=',
-            '|=',
-            '&=',
-            '~=',
-            '<<=',
-            '>>=',
-            '^=',
-            '%=',
-        ),
+        choice(...ASSIGNMENT_OPS),
         alias($._variable_assignment_explist, $.expression_list)
       ),
     // varlist ::= var {',' var}

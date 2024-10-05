@@ -18,6 +18,10 @@
     "named": true,
     "subtypes": [
       {
+        "type": "arrow_expression",
+        "named": true
+      },
+      {
         "type": "binary_expression",
         "named": true
       },
@@ -157,6 +161,42 @@
       "types": [
         {
           "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "arrow_expression",
+    "named": true,
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "block",
+            "named": true
+          }
+        ]
+      },
+      "parameters": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "parameters",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "parenthesized_expression_list",
           "named": true
         }
       ]
@@ -1177,6 +1217,10 @@
   },
   {
     "type": "-=",
+    "named": false
+  },
+  {
+    "type": "->",
     "named": false
   },
   {

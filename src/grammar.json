@@ -1333,6 +1333,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "arrow_expression"
+        },
+        {
+          "type": "SYMBOL",
           "name": "variable"
         },
         {
@@ -2107,6 +2111,36 @@
             {
               "type": "STRING",
               "value": "}"
+            }
+          ]
+        }
+      ]
+    },
+    "arrow_expression": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "parameters",
+          "content": {
+            "type": "SYMBOL",
+            "name": "parameters"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "->"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_braced_body"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "parenthesized_expression_list"
             }
           ]
         }
@@ -3450,6 +3484,14 @@
     ],
     [
       "_expression_list"
+    ],
+    [
+      "_parameter_list",
+      "variable"
+    ],
+    [
+      "expression",
+      "_parameter_list"
     ]
   ],
   "precedences": [],

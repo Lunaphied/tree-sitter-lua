@@ -78,6 +78,9 @@ module.exports = grammar({
     // Begin fuckery for trailing commas...
     [ $._expression_list ],
     // End trailing commas.
+    // Begin arrow func things
+    [ $._parameter_list, $.variable ],
+    [ $.expression, $._parameter_list ],
   ],
 
   rules: {
@@ -387,6 +390,7 @@ module.exports = grammar({
         $.string,
         $.vararg_expression,
         $.function_definition,
+        $.arrow_expression,
         $.variable,
         $.function_call,
         $.parenthesized_expression,
@@ -517,6 +521,16 @@ module.exports = grammar({
               '}'
           )
       ),
+    // FIXME: this will need to be cleaned up with all the other parenthesis junk.
+    // arrowexp ::= parameters '->' (funcbody | expression)
+    arrow_expression: ($) => seq(
+      field('parameters', $.parameters),
+      '->',
+      choice(
+        $._braced_body,
+        $.parenthesized_expression_list
+      )
+    ),
     // '(' [parlist] ')'
     parameters: ($) => seq('(', optional($._parameter_list), ')'),
     // parlist ::= namelist [',' ('...' [identifier]) ] | ('...' [identifier])
